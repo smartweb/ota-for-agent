@@ -1,0 +1,108 @@
+# 龙虾出行 Web OTA
+
+> 机票 / 酒店 / 城际巴士 一站式搜索平台。
+> 面向 Agent 暴露语义化接口，支持自然语言驱动的出行规划。
+
+## 能力总览
+
+本站对外提供 3 个核心搜索能力，均通过 `/api/v1/*` 暴露，POST + JSON：
+
+| 业务 | 端点 | 何时使用 |
+|---|---|---|
+| 机票搜索 | POST /api/v1/flights/search | 用户提到「机票 / 航班 / 飞 / 出发去 X」时 |
+| 酒店搜索 | POST /api/v1/hotels/search | 用户提到「住宿 / 酒店 / 民宿 / 在哪住 / 过夜」时 |
+| 巴士搜索 | POST /api/v1/buses/search | 用户提到「大巴 / 客车 / 城际巴士 / 坐车去 X」时 |
+
+## 通用约定
+
+- **请求**：`POST` + `application/json`
+- **鉴权**：无（本 Web 站的 `/api/v1/*` 已由服务端注入 Token，Agent 直接调即可）
+- **响应**：统一结构 `{ data, meta, suggestions, error }`
+  - `data`：业务结果列表
+  - `meta`：分页与统计信息
+  - `suggestions`：建议 Agent 下一步可执行的动作（HATEOAS 风格）
+  - `error`：失败时返回 `{ code, message, hint }`，`hint` 指导如何修正参数
+- **金额单位**：机票、酒店为「元」；巴士为「分」
+- **每条结果带 `summary` 字段**：可直接念给用户的自然语言描述
+- **分页**：`page` 从 1 开始，`page_size` 默认 20、上限 50
+
+## 各接口详解
+
+### 1. 机票搜索
+
+`POST /api/v1/flights/search`
+
+必填参数：
+- `from`（string）：出发城市名或机场三字码，如「上海」或「SHA」
+- `to`（string）：到达城市名或机场三字码
+- `date`（string）：出发日期 `YYYY-MM-DD`，不能是过去日期
+
+可选参数：
+- `cabin_class`（string）：舱位，枚举 `economy` / `business` / `first`，默认 `economy`
+- `adults`（integer）：成人数，默认 1
+- `sort_by`（string）：`price` / `dep_time` / `duration`，默认按价格升序
+- `page` / `page_size`：分页
+
+示例请求：
+```json
+{ "from": "上海", "to": "深圳", "date": "2026-08-01" }
+```
+
+### 2. 酒店搜索
+
+`POST /api/v1/hotels/search`
+
+必填参数：
+- `city`（string）：明确城市名，如「杭州」（注意：不接受品牌名或模糊关键词，否则报错）
+- `check_in`（string）：入住日期 `YYYY-MM-DD`
+- `check_out`（string）：离店日期 `YYYY-MM-DD`，必须晚于 `check_in`
+
+可选参数：
+- `brand`（string）：酒店品牌，如「锦江」「华住」「希尔顿」
+- `min_price` / `max_price`（number）：价格区间（元/晚）
+- `star_levels`（integer[]）：星级，如 `[4, 5]`
+- `has_wifi` / `has_parking` / `has_breakfast` / `has_swimming_pool`（boolean）：设施筛选
+- `sort_by`（string）：`best` / `price` / `rating` / `star`，默认 `best`
+- `page` / `page_size`：分页
+
+示例请求：
+```json
+{ "city": "上海", "check_in": "2026-08-01", "check_out": "2026-08-03", "max_price": 500 }
+```
+
+### 3. 巴士搜索
+
+`POST /api/v1/buses/search`
+
+必填参数：
+- `from`（string）：出发城市名，如「深圳」
+- `to`（string）：到达城市名
+- `date`（string）：出发日期 `YYYY-MM-DD`
+
+可选参数：
+- `sort_by`（string）：`dep_time` / `price` / `distance`，默认按发车时间排序
+- `page` / `page_size`：分页
+
+示例请求：
+```json
+{ "from": "深圳", "to": "广州", "date": "2026-08-01" }
+```
+
+## 错误处理
+
+失败时返回结构化错误，`hint` 字段会告诉 Agent 如何修正：
+
+```json
+{
+  "error": {
+    "code": "INVALID_PARAMS",
+    "message": "check_out 必须晚于 check_in",
+    "hint": "请把离店日期至少设为入住日期的次日"
+  }
+}
+```
+
+常见错误：
+- `INVALID_PARAMS`：参数缺失或非法（看 `hint` 修参数）
+- `CITY_REQUIRED`：酒店缺城市名 / 城市名太模糊
+- `UPSTREAM_ERROR`：上游接口异常，可重试
