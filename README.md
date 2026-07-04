@@ -1,7 +1,5 @@
-# 龙虾出行 · Web OTA
+# 面向 AI Agent开发的OTA
 
-> 一期 Web 版 OTA，聚合 **机票 / 酒店 / 城际巴士** 三大业务的搜索与展示。
-> 设计参考 [同程旅行](https://www.ly.com/) 首页结构 + [Vercel Design](https://vercel.com/design) 极简风格，主色取「龙虾橙红」。
 
 ## ✨ 特性
 
@@ -88,14 +86,6 @@ cd WebOTA
 vercel              # 首次部署（preview）
 vercel --prod       # 正式环境
 ```
-
-部署过程中或部署后在项目里**配置环境变量**：
-
-| Key | Value | 环境 |
-|---|---|---|
-| `LONGXA_API_TOKEN` | `rdak_live_FEZHL8EJnPFlKyHf2vpEBoNQdhifAKmD` | Production / Preview / Development |
-| `LONGXA_API_BASE` | `https://api.longxiachuxing.com` | （可选，有默认值） |
-
 > 在 Vercel Dashboard → 项目 → **Settings → Environment Variables** 中添加。
 
 ### 方式 B：Dashboard Git 集成
@@ -124,7 +114,6 @@ vercel --prod       # 正式环境
 
 ## 📝 备注
 
-- 一期范围：**仅搜索 + 展示**。下单、填表、支付、订单管理留待二期
 - 金额单位：机票/酒店为「元」，巴士为「分」（已在 `BusCard` 中转换）
 - 机票请求体的 schema 文档未完整声明，字段以平台示例为准
 - 巴士接口实际要求 `start_addr` 或 `start_lng+start_lat` 提供一组（文档标"可选"），本项目已在 `cities.ts` 内置市中心坐标自动补全
