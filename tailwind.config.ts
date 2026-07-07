@@ -40,6 +40,29 @@ const config: Config = {
         card: "0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.04)",
         hover: "0 4px 24px rgba(0,0,0,0.08)",
       },
+      keyframes: {
+        // 顶部进度条：从左滑到右并淡出
+        loadingBar: {
+          "0%": { transform: "translateX(-100%)", opacity: "0" },
+          "30%": { opacity: "1" },
+          "100%": { transform: "translateX(250%)", opacity: "0" },
+        },
+        // skeleton 光泽流动
+        shimmer: {
+          "0%": { backgroundPosition: "-200% 0" },
+          "100%": { backgroundPosition: "200% 0" },
+        },
+        // 文案省略号轻跳
+        dotBounce: {
+          "0%, 80%, 100%": { transform: "translateY(0)", opacity: "0.4" },
+          "40%": { transform: "translateY(-3px)", opacity: "1" },
+        },
+      },
+      animation: {
+        "loading-bar": "loadingBar 1.4s ease-in-out infinite",
+        shimmer: "shimmer 1.6s linear infinite",
+        "dot-bounce": "dotBounce 1.4s ease-in-out infinite",
+      },
     },
   },
   plugins: [],

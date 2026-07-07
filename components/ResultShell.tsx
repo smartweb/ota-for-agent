@@ -18,7 +18,9 @@ export function useProxySearch<T>(
   deps: unknown[] = []
 ): Result<T> {
   const [data, setData] = useState<T | null>(null);
-  const [loading, setLoading] = useState(false);
+  // 初始为 true：避免首次渲染时 data=null 却跳过 loading 态，
+  // 导致列表页一闪而过的"未找到结果"（SSR + hydrate 第一次都受影响）。
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -63,16 +65,133 @@ export function useProxySearch<T>(
 
 /* --------------------- 共享 UI 片段 --------------------- */
 
-export function LoadingState({ text = "搜索中..." }: { text?: string }) {
+/**
+ * 骨架卡片单元：带 shimmer 流动光泽
+ */
+function SkeletonBox({ className = "" }: { className?: string }) {
   return (
-    <div className="space-y-3">
-      {[0, 1, 2, 3].map((i) => (
-        <div
+    <div
+      className={`rounded-md bg-[linear-gradient(90deg,#f4f4f5_0%,#ececee_40%,#f8f8f9_50%,#ececee_60%,#f4f4f5_100%)] bg-[length:200%_100%] animate-shimmer ${className}`}
+    />
+  );
+}
+
+/** 顶部品牌色流动进度条，提供「正在加载」的强烈信号 */
+function LoadingBar() {
+  return (
+    <div className="relative h-[3px] w-full overflow-hidden rounded-full bg-neutral-100">
+      <div className="absolute inset-y-0 left-0 w-1/3 rounded-full bg-brand-500 animate-loading-bar" />
+    </div>
+  );
+}
+
+/** 跳动的省略号 */
+function BouncingDots() {
+  return (
+    <span className="inline-flex gap-1">
+      {[0, 1, 2].map((i) => (
+        <span
           key={i}
-          className="h-24 rounded-2xl border border-neutral-200 bg-neutral-50 animate-pulse"
+          className="inline-block w-1.5 h-1.5 rounded-full bg-brand-400 animate-dot-bounce"
+          style={{ animationDelay: `${i * 0.16}s` }}
         />
       ))}
-      <p className="text-center text-sm text-neutral-400">{text}</p>
+    </span>
+  );
+}
+
+/** 机票列表骨架 */
+function FlightSkeletonCard() {
+  return (
+    <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-card">
+      <div className="flex items-center gap-4">
+        {/* 航司图标 */}
+        <SkeletonBox className="w-10 h-10 rounded-full shrink-0" />
+        {/* 航段信息 */}
+        <div className="flex-1 min-w-0 space-y-2">
+          <div className="flex items-center gap-3">
+            <SkeletonBox className="w-14 h-4" />
+            <SkeletonBox className="w-6 h-3" />
+            <SkeletonBox className="w-14 h-4" />
+            <SkeletonBox className="w-16 h-3" />
+          </div>
+          <div className="flex items-center gap-3">
+            <SkeletonBox className="w-20 h-3" />
+            <SkeletonBox className="w-12 h-3" />
+          </div>
+        </div>
+        {/* 价格 */}
+        <div className="text-right space-y-2 shrink-0">
+          <SkeletonBox className="w-16 h-5 ml-auto" />
+          <SkeletonBox className="w-12 h-3 ml-auto" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** 酒店列表骨架 */
+function HotelSkeletonCard() {
+  return (
+    <div className="rounded-2xl border border-neutral-200 bg-white shadow-card overflow-hidden">
+      <div className="flex">
+        {/* 图片 */}
+        <SkeletonBox className="w-40 h-32 shrink-0 rounded-none" />
+        {/* 信息 */}
+        <div className="flex-1 min-w-0 p-4 space-y-2">
+          <SkeletonBox className="w-2/3 h-4" />
+          <SkeletonBox className="w-1/3 h-3" />
+          <div className="flex gap-2 pt-1">
+            <SkeletonBox className="w-10 h-5 rounded-full" />
+            <SkeletonBox className="w-12 h-5 rounded-full" />
+            <SkeletonBox className="w-14 h-5 rounded-full" />
+          </div>
+          <SkeletonBox className="w-1/2 h-3" />
+        </div>
+        {/* 价格 */}
+        <div className="p-4 text-right space-y-2 shrink-0">
+          <SkeletonBox className="w-16 h-6 ml-auto" />
+          <SkeletonBox className="w-12 h-3 ml-auto" />
+          <SkeletonBox className="w-14 h-7 ml-auto mt-3" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** 通用骨架 */
+function GenericSkeletonCard() {
+  return <SkeletonBox className="h-24 rounded-2xl" />;
+}
+
+export function LoadingState({
+  text = "搜索中...",
+  type = "generic",
+  count = 4,
+}: {
+  text?: string;
+  type?: "flight" | "hotel" | "generic";
+  count?: number;
+}) {
+  const SkeletonCard =
+    type === "flight"
+      ? FlightSkeletonCard
+      : type === "hotel"
+      ? HotelSkeletonCard
+      : GenericSkeletonCard;
+
+  return (
+    <div className="space-y-4">
+      <LoadingBar />
+      <div className={type === "generic" ? "space-y-3" : "space-y-4"}>
+        {Array.from({ length: count }).map((_, i) => (
+          <SkeletonCard key={i} />
+        ))}
+      </div>
+      <div className="flex items-center justify-center gap-2 pt-2">
+        <BouncingDots />
+        <span className="text-sm text-neutral-400">{text}</span>
+      </div>
     </div>
   );
 }
