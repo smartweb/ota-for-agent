@@ -160,3 +160,28 @@ export function PriceInput({
     </label>
   );
 }
+
+/** 价格分段预设 chip（如 ¥0-300 / ¥300-600） */
+export function PricePreset({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`px-2.5 py-1 rounded-full text-[11px] transition border ${
+        active
+          ? "bg-brand-50 border-brand-300 text-brand-600 font-medium"
+          : "bg-white border-neutral-200 text-neutral-600 hover:border-brand-300 hover:text-brand-600"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
