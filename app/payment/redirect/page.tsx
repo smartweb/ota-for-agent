@@ -35,18 +35,22 @@ function PaymentRedirectInner() {
       attempts++;
       try {
         // 按业务类型查详情
-        const endpoint =
-          type === "flight"
-            ? "/api/flight/order/detail"
-            : `/api/hotel/order/detail/${id}`;
-        const res =
-          type === "flight"
-            ? await fetch(endpoint, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ out_trade_no: id }),
-              })
-            : await fetch(endpoint);
+        let res: Response;
+        if (type === "flight") {
+          res = await fetch("/api/flight/order/detail", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ out_trade_no: id }),
+          });
+        } else if (type === "bus") {
+          res = await fetch("/api/bus/order/detail", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ out_trade_no: id }),
+          });
+        } else {
+          res = await fetch(`/api/hotel/order/detail/${id}`);
+        }
         const json = await res.json();
         if (json.code !== 0) throw new Error(json.message);
 
@@ -113,7 +117,11 @@ function PaymentRedirectInner() {
         <h2 className="text-lg font-semibold mb-2 text-emerald-600">支付成功</h2>
         <p className="text-sm text-neutral-500 mb-1">订单号：{orderNo || id}</p>
         <p className="text-sm text-neutral-500 mb-6">
-          {type === "flight" ? "出票信息将稍后发送至联系人手机" : "酒店确认后即可入住"}
+          {type === "flight"
+            ? "出票信息将稍后发送至联系人手机"
+            : type === "bus"
+            ? "车票信息将稍后发送至联系人手机"
+            : "酒店确认后即可入住"}
         </p>
         <div className="flex gap-3 justify-center">
           {orderNo && (

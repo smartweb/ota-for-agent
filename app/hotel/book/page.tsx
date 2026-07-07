@@ -27,7 +27,8 @@ function HotelBookInner() {
   const sp = useSearchParams();
   const router = useRouter();
 
-  const searchOfferId = sp.get("token") || "";
+  // token 从 sessionStorage 读取（避免 URL 过长），展示信息从 URL + sessionStorage 取
+  const [searchOfferId, setSearchOfferId] = useState<string>("");
   const hotelName = sp.get("hotel_name") || "";
   const hotelPrice = sp.get("price") || "";
   const destination = sp.get("destination") || "";
@@ -45,17 +46,20 @@ function HotelBookInner() {
   const [creating, setCreating] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
 
-  // 拉房型
+  // 先从 sessionStorage 读取 token，再拉房型
   useEffect(() => {
-    if (!searchOfferId) {
-      setError("缺少预订令牌（token），请从酒店列表点击「预订」进入");
+    const token =
+      (typeof window !== "undefined" && sessionStorage.getItem("hotel_search_offer_id")) || "";
+    setSearchOfferId(token);
+    if (!token) {
+      setError("缺少预订令牌，请从酒店列表点击「预订」进入");
       setLoading(false);
       return;
     }
     fetch("/api/hotel/rooms", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ search_offer_id: searchOfferId }),
+      body: JSON.stringify({ search_offer_id: token }),
     })
       .then((r) => r.json())
       .then((json) => {
@@ -64,7 +68,7 @@ function HotelBookInner() {
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [searchOfferId]);
+  }, []);
 
   const nights = useMemo(() => {
     if (!checkIn || !checkOut) return 1;

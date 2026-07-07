@@ -376,3 +376,123 @@ export interface HotelOrderCancelResponse {
   refund_status?: string;
   cancelled_at?: string;
 }
+
+/* ----------------------------- 巴士 ----------------------------- */
+// 对齐 /open/v1/bus/order/{pre,create,detail,list,cancel}
+// 注意：巴士订单号字段为 system_no（同机票，异酒店 order_no）
+//       创建订单 total_amount 单位为「分」，详情接口金额单位为「元」
+
+/** 巴士乘客（实名） */
+export interface BusPassenger {
+  name: string;
+  phone: string;
+  cert_no: string;
+  /** 证件类型：1=身份证 */
+  cert_type?: number;
+  /** 是否儿童票 */
+  is_child?: boolean;
+}
+
+/** 预下单（询价）请求 */
+export interface BusPreOrderRequest {
+  /** 班次 GID（即 BusItem.gid） */
+  line_class_day_gid: string;
+  start_station_gid: string;
+  end_station_gid: string;
+  passengers: BusPassenger[];
+}
+
+/** 预下单（询价）响应 —— total_price 单位为元 */
+export interface BusPreOrderResponse {
+  total_price: number;
+  passenger_count: number;
+  avail_seat_count: number;
+}
+
+/** 创建订单请求 —— total_amount 单位为分（仅校验用） */
+export interface BusCreateOrderRequest {
+  line_class_day_gid: string;
+  start_station_gid: string;
+  end_station_gid: string;
+  passengers: BusPassenger[];
+  user_phone: string;
+  out_trade_no: string;
+  total_amount?: number;
+  pay_mode?: "user_pay" | "enterprise_credit" | "monthly_settle";
+  callback_url?: string;
+  return_url?: string;
+  external_user_id?: string;
+  external_user_name?: string;
+}
+
+/** 创建订单响应 */
+export interface BusCreateOrderResponse {
+  /** 平台订单号 */
+  system_no: string;
+  out_trade_no: string;
+  supplier_order_no?: string;
+  /** 订单总金额（分） */
+  total_amount: number;
+  status: string;
+  pay_expire_time?: string;
+  /** 收银台 URL（user_pay 模式） */
+  checkout_url?: string;
+}
+
+/** 车票（订单详情内） */
+export interface BusTicket {
+  ticket_id?: string;
+  bar_code?: string;
+  ticket_status?: string;
+  ticket_type?: string;
+  /** 实付金额（元） */
+  pay_amount?: number;
+  seat_no?: string;
+  passenger_name?: string;
+  passenger_cert_no?: string;
+  passenger_phone?: string;
+  is_child?: boolean;
+  refund_status?: string;
+  /** 退款金额（元） */
+  refund_amount?: number;
+}
+
+/** 订单详情响应 —— 金额单位为「元」 */
+export interface BusOrderDetailResponse {
+  system_no: string;
+  out_trade_no?: string;
+  supplier_order_no?: string;
+  status: string;
+  supplier_status?: string;
+  pay_status?: string;
+  /** 订单总价（元） */
+  total_amount?: number;
+  /** 实付金额（元） */
+  pay_amount?: number;
+  /** 退款金额（元） */
+  refund_amount?: number;
+  contact_phone?: string;
+  start_station_name?: string;
+  end_station_name?: string;
+  start_class_time?: string;
+  end_class_time?: string;
+  passengers?: BusPassenger[];
+  tickets?: BusTicket[];
+  created_at?: string;
+}
+
+/** 订单列表项 */
+export interface BusOrderListItem extends BusOrderDetailResponse {}
+
+/** 订单列表响应 */
+export interface BusOrderListResponse {
+  orders: BusOrderListItem[];
+  page_info?: { page: number; page_size: number; total: number };
+  total: number;
+}
+
+/** 取消订单响应 */
+export interface BusOrderCancelResponse {
+  system_no: string;
+  status: string;
+}

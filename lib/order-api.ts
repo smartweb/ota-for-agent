@@ -20,6 +20,13 @@ import type {
   HotelOrderDetailResponse,
   HotelOrderListResponse,
   HotelOrderCancelResponse,
+  BusPreOrderRequest,
+  BusPreOrderResponse,
+  BusCreateOrderRequest,
+  BusCreateOrderResponse,
+  BusOrderDetailResponse,
+  BusOrderListResponse,
+  BusOrderCancelResponse,
 } from "./order-types";
 
 const ENDPOINTS = {
@@ -33,6 +40,11 @@ const ENDPOINTS = {
   hotelOrderDetail: "/open/v1/hotel/order/detail", // GET + path 参数
   hotelOrderList: "/open/v1/hotel/order/list",
   hotelOrderCancel: "/open/v1/hotel/order/cancel",
+  busOrderPre: "/open/v1/bus/order/pre",
+  busOrderCreate: "/open/v1/bus/order/create",
+  busOrderDetail: "/open/v1/bus/order/detail",
+  busOrderList: "/open/v1/bus/order/list",
+  busOrderCancel: "/open/v1/bus/order/cancel",
 } as const;
 
 /* ----------------------------- 机票 ----------------------------- */
@@ -111,4 +123,36 @@ export const hotelOrderCancel = (orderNo: string, cancelReason?: string) =>
   callApi<HotelOrderCancelResponse>(ENDPOINTS.hotelOrderCancel, {
     order_no: orderNo,
     cancel_reason: cancelReason,
+  });
+
+/* ----------------------------- 巴士 ----------------------------- */
+// 订单号为 system_no（同机票），cancel 字段叫 reason（异酒店 cancel_reason）
+
+export const busPreOrder = (req: BusPreOrderRequest) =>
+  callApi<BusPreOrderResponse>(ENDPOINTS.busOrderPre, {
+    ...req,
+  });
+
+export const busOrderCreate = (req: BusCreateOrderRequest) =>
+  callApi<BusCreateOrderResponse>(ENDPOINTS.busOrderCreate, {
+    ...req,
+  });
+
+export const busOrderDetail = (systemNo: string, outTradeNo?: string) =>
+  callApi<BusOrderDetailResponse>(ENDPOINTS.busOrderDetail, {
+    system_no: systemNo,
+    out_trade_no: outTradeNo,
+  });
+
+export const busOrderList = (params: Record<string, unknown> = {}) =>
+  callApi<BusOrderListResponse>(ENDPOINTS.busOrderList, {
+    page: 1,
+    page_size: 20,
+    ...params,
+  });
+
+export const busOrderCancel = (systemNo: string, reason?: string) =>
+  callApi<BusOrderCancelResponse>(ENDPOINTS.busOrderCancel, {
+    system_no: systemNo,
+    reason,
   });

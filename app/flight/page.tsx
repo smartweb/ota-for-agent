@@ -11,7 +11,19 @@ import {
   ErrorState,
   EmptyState,
 } from "@/components/ResultShell";
-import { POPULAR_AIRPORTS } from "@/lib/cities";
+import { POPULAR_AIRPORTS, INTERNATIONAL_AIRPORTS } from "@/lib/cities";
+
+/**
+ * 判断航线是国际还是国内：出发或到达任一端在国际城市列表里，即为国际航线。
+ * 上游接口 trip_mode 必须正确（domestic / international）才能命中数据。
+ */
+function isInternationalRoute(fromCode?: string, toCode?: string): boolean {
+  const intlCodes = new Set(INTERNATIONAL_AIRPORTS.map((c) => c.code));
+  return (
+    (!!fromCode && intlCodes.has(fromCode)) ||
+    (!!toCode && intlCodes.has(toCode))
+  );
+}
 import type { FlightSearchResponse } from "@/lib/types";
 import {
   FlightFilterSidebar,
@@ -21,6 +33,7 @@ import {
   type FlightSortKey,
 } from "@/components/filters/FlightFilters";
 import { SortBar, type SortOption } from "@/components/filters/SortBar";
+import DatePickerTabs, { buildDateTabs } from "@/components/DatePickerTabs";
 
 const SORT_OPTIONS: SortOption<FlightSortKey>[] = [
   { key: "price_asc", label: "价格↑" },
@@ -42,14 +55,18 @@ function FlightResultInner() {
   const sp = useSearchParams();
   const from = sp.get("from") || POPULAR_AIRPORTS[1].code;
   const to = sp.get("to") || POPULAR_AIRPORTS[3].code;
-  const date = sp.get("date") || defaultDate(7);
+  const initialDate = sp.get("date") || defaultDate(7);
+
+  // 日期用 state 管理，切换时重新搜索
+  const [date, setDate] = useState<string>(initialDate);
+  const dateTabs = useMemo(() => buildDateTabs(date, 3), [date]);
 
   const [filter, setFilter] = useState<FlightFilterState>(defaultFlightFilters);
   const [sort, setSort] = useState<FlightSortKey>("price_asc");
 
   const reqBody = useMemo(
     () => ({
-      trip_mode: "domestic",
+      trip_mode: isInternationalRoute(from, to) ? "international" : "domestic",
       trip_type: "oneway",
       from_code: from,
       to_code: to,
@@ -92,7 +109,14 @@ function FlightResultInner() {
         }
       />
 
-      {loading && <LoadingState text="正在为你搜索最优惠的航班..." />}
+      {/* 日期切换 Tab */}
+      <div className="mb-4">
+        <DatePickerTabs value={date} onChange={setDate} tabs={dateTabs} />
+      </div>
+
+      {loading && (
+        <LoadingState type="flight" text="正在为你搜索最优惠的航班" />
+      )}
       {error && <ErrorState message={error} />}
       {!loading && !error && (
         <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-6 mt-4">

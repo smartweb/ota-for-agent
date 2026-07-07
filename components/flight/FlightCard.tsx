@@ -1,4 +1,4 @@
-import Link from "next/link";
+import FlightBookButton from "./FlightBookButton";
 import type { FlightItem } from "@/lib/types";
 
 /** "2026-06-01 08:00" → "08:00" */
@@ -103,27 +103,19 @@ export default function FlightCard({
               ? ` · ${formatDiscount(cabin.discount_rate)}折`
               : ""}
           </div>
-          <Link
-            href={{
-              pathname: "/flight/book",
-              query: {
-                token: cabin?.search_offer_id || "",
-                flight_no: flight.flight_no || "",
-                airline: flight.airline_name || "",
-                dep_city: flight.dep_city_name || "",
-                arr_city: flight.arr_city_name || "",
-                dep_time: flight.dep_time || "",
-                arr_time: flight.arr_time || "",
-                price: price ?? "",
-                date: searchParams?.date || "",
-                from: searchParams?.from || "",
-                to: searchParams?.to || "",
-              },
-            }}
-            className="mt-2 inline-block px-4 py-1.5 rounded-lg bg-brand-500 text-white text-xs font-medium hover:bg-brand-600 transition"
-          >
-            预订
-          </Link>
+          <FlightBookButton
+            searchOfferId={cabin?.search_offer_id}
+            flightNo={flight.flight_no}
+            airline={flight.airline_name}
+            depCity={flight.dep_city_name}
+            arrCity={flight.arr_city_name}
+            depTime={flight.dep_time}
+            arrTime={flight.arr_time}
+            price={price}
+            date={searchParams?.date}
+            from={searchParams?.from}
+            to={searchParams?.to}
+          />
         </div>
       </div>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   PassengerForm,
@@ -27,7 +27,7 @@ function FlightBookInner() {
   const sp = useSearchParams();
   const router = useRouter();
 
-  // 从 URL 取航班摘要信息（由 FlightCard 传入）
+  // 从 URL 取航班摘要展示信息（由 FlightCard 传入）
   const flightNo = sp.get("flight_no") || "";
   const airline = sp.get("airline") || "";
   const depCity = sp.get("dep_city") || "";
@@ -35,8 +35,18 @@ function FlightBookInner() {
   const depTime = sp.get("dep_time") || "";
   const arrTime = sp.get("arr_time") || "";
   const price = sp.get("price") || "";
-  const searchOfferId = sp.get("token") || "";
   const date = sp.get("date") || "";
+
+  // token 从 sessionStorage 读取（避免 URL 过长）
+  const [searchOfferId, setSearchOfferId] = useState<string>("");
+  const [tokenReady, setTokenReady] = useState(false);
+
+  useEffect(() => {
+    const token =
+      (typeof window !== "undefined" && sessionStorage.getItem("flight_search_offer_id")) || "";
+    setSearchOfferId(token);
+    setTokenReady(true);
+  }, []);
 
   const [passengers, setPassengers] = useState<PassengerInfo[]>([emptyPassenger()]);
   const [contact, setContact] = useState<ContactInfo>({ name: "", phone: "" });
@@ -44,9 +54,12 @@ function FlightBookInner() {
   const [pricing, setPricing] = useState<FlightPricingResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  if (!tokenReady) {
+    return <LoadingState text="加载中..." />;
+  }
   if (!searchOfferId) {
     return (
-      <ErrorState message="缺少预订令牌（token），请从航班列表点击「预订」进入" />
+      <ErrorState message="缺少预订令牌，请从航班列表点击「预订」进入" />
     );
   }
 
