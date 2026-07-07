@@ -1,4 +1,5 @@
 import type { BusItem } from "@/lib/types";
+import BusBookButton from "./BusBookButton";
 
 /** 分 → 元（接口单位是分） */
 function fenToYuan(fen?: number): string {
@@ -83,12 +84,7 @@ export default function BusCard({ bus }: { bus: BusItem }) {
               {fenToYuan(bus.price)}
             </span>
           </div>
-          <button
-            disabled={avail === 0}
-            className="mt-2 px-4 py-1.5 rounded-lg bg-brand-500 text-white text-xs font-medium hover:bg-brand-600 disabled:bg-neutral-300 disabled:cursor-not-allowed transition"
-          >
-            {avail === 0 ? "售罄" : "预订"}
-          </button>
+          <BusBookButton bus={bus} disabled={avail === 0} />
         </div>
       </div>
 

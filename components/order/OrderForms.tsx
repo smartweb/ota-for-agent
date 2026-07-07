@@ -7,6 +7,7 @@ import type {
   ContactInfo,
   IdType,
   PassengerType,
+  BusPassenger,
 } from "@/lib/order-types";
 
 /* ----------------------------- 原子输入 ----------------------------- */
@@ -180,6 +181,94 @@ export function GuestForm({
 
 export function emptyGuest(): GuestInfo {
   return { name: "" };
+}
+
+/* ----------------------------- 乘客表单（巴士） ----------------------------- */
+// 巴士乘客字段比酒店重、比机票轻：name/phone/cert_no 必填，cert_type/is_child 选填
+
+export function BusPassengerForm({
+  index,
+  value,
+  onChange,
+  onRemove,
+  canRemove,
+}: {
+  index: number;
+  value: BusPassenger;
+  onChange: (v: BusPassenger) => void;
+  onRemove?: () => void;
+  canRemove?: boolean;
+}) {
+  const update = (patch: Partial<BusPassenger>) => onChange({ ...value, ...patch });
+
+  return (
+    <div className="rounded-2xl border border-neutral-200 p-4 bg-white">
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-sm font-semibold">
+          乘客 {index + 1}
+          {value.is_child && (
+            <span className="ml-2 text-xs text-amber-600">儿童票</span>
+          )}
+        </span>
+        {canRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="text-xs text-neutral-400 hover:text-red-500 transition"
+          >
+            删除
+          </button>
+        )}
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="姓名" required>
+          <TextInput
+            value={value.name}
+            onChange={(e) => update({ name: e.target.value })}
+            placeholder="与证件一致"
+          />
+        </Field>
+        <Field label="手机号" required>
+          <TextInput
+            value={value.phone}
+            onChange={(e) => update({ phone: e.target.value })}
+            placeholder="11 位手机号"
+            maxLength={11}
+          />
+        </Field>
+        <Field label="证件号码" required>
+          <TextInput
+            value={value.cert_no}
+            onChange={(e) => update({ cert_no: e.target.value })}
+            placeholder="身份证号"
+          />
+        </Field>
+        <Field label="儿童票">
+          <SelectInput
+            value={value.is_child ? "1" : "0"}
+            onChange={(e) => update({ is_child: e.target.value === "1" })}
+          >
+            <option value="0">成人票</option>
+            <option value="1">儿童票</option>
+          </SelectInput>
+        </Field>
+      </div>
+    </div>
+  );
+}
+
+export function emptyBusPassenger(): BusPassenger {
+  return { name: "", phone: "", cert_no: "", cert_type: 1, is_child: false };
+}
+
+export function validateBusPassengers(list: BusPassenger[]): string | null {
+  for (let i = 0; i < list.length; i++) {
+    const p = list[i];
+    if (!p.name.trim()) return `请填写乘客 ${i + 1} 的姓名`;
+    if (!p.phone.trim() || p.phone.length !== 11) return `乘客 ${i + 1} 的手机号无效`;
+    if (!p.cert_no.trim()) return `请填写乘客 ${i + 1} 的证件号码`;
+  }
+  return null;
 }
 
 /* ----------------------------- 联系人表单 ----------------------------- */

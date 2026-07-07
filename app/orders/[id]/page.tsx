@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/order/OrderStatus";
 import type {
   FlightOrderDetailResponse,
   HotelOrderDetailResponse,
+  BusOrderDetailResponse,
 } from "@/lib/order-types";
 
 export default function OrderDetailPage() {
@@ -25,7 +26,7 @@ function OrderDetailInner() {
   const type = sp.get("type") || "flight";
 
   const [detail, setDetail] = useState<
-    FlightOrderDetailResponse | HotelOrderDetailResponse | null
+    FlightOrderDetailResponse | HotelOrderDetailResponse | BusOrderDetailResponse | null
   >(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,18 +36,22 @@ function OrderDetailInner() {
     setLoading(true);
     setError(null);
     try {
-      const endpoint =
-        type === "flight"
-          ? "/api/flight/order/detail"
-          : `/api/hotel/order/detail/${orderId}`;
-      const res =
-        type === "flight"
-          ? await fetch(endpoint, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ system_no: orderId }),
-            })
-          : await fetch(endpoint);
+      let res: Response;
+      if (type === "flight") {
+        res = await fetch("/api/flight/order/detail", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ system_no: orderId }),
+        });
+      } else if (type === "bus") {
+        res = await fetch("/api/bus/order/detail", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ system_no: orderId }),
+        });
+      } else {
+        res = await fetch(`/api/hotel/order/detail/${orderId}`);
+      }
       const json = await res.json();
       if (json.code !== 0) throw new Error(json.message);
       setDetail(json.data);
@@ -67,9 +72,15 @@ function OrderDetailInner() {
     setCanceling(true);
     try {
       const endpoint =
-        type === "flight" ? "/api/flight/order/cancel" : "/api/hotel/order/cancel";
+        type === "flight"
+          ? "/api/flight/order/cancel"
+          : type === "bus"
+          ? "/api/bus/order/cancel"
+          : "/api/hotel/order/cancel";
       const body =
-        type === "flight" ? { system_no: orderId } : { order_no: orderId };
+        type === "hotel"
+          ? { order_no: orderId }
+          : { system_no: orderId };
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -96,7 +107,8 @@ function OrderDetailInner() {
     );
 
   const isFlight = type === "flight";
-  /* 机票/酒店订单字段名不同，统一用索引签名访问 */
+  const isBus = type === "bus";
+  /* 机票/酒店/巴士订单字段名不同，统一用索引签名访问 */
   const d: Record<string, any> = detail as Record<string, any>;
   const status = d.status || "";
   const totalAmount = d.total_amount;
@@ -116,7 +128,7 @@ function OrderDetailInner() {
       <div className="rounded-2xl border border-neutral-200 bg-white p-6 mb-4">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-lg font-semibold">
-            {isFlight ? "机票订单" : "酒店订单"}
+            {isFlight ? "机票订单" : isBus ? "巴士订单" : "酒店订单"}
           </h1>
           <StatusBadge status={status} text={d.status_text} />
         </div>
@@ -130,6 +142,8 @@ function OrderDetailInner() {
       {/* 业务信息 */}
       {isFlight ? (
         <FlightDetailInfo detail={detail as FlightOrderDetailResponse} />
+      ) : isBus ? (
+        <BusDetailInfo detail={detail as BusOrderDetailResponse} />
       ) : (
         <HotelDetailInfo detail={detail as HotelOrderDetailResponse} />
       )}
@@ -255,6 +269,73 @@ function Row({ label, value }: { label: string; value?: string }) {
     <div className="flex gap-3">
       <span className="text-neutral-400 w-16 shrink-0">{label}</span>
       <span className="text-neutral-700">{value || "—"}</span>
+    </div>
+  );
+}
+
+/* ----------------------------- 巴士详情信息 ----------------------------- */
+
+function BusDetailInfo({ detail }: { detail: BusOrderDetailResponse }) {
+  return (
+    <div className="rounded-2xl border border-neutral-200 bg-white p-5 mb-4">
+      <h2 className="text-sm font-semibold mb-3">行程信息</h2>
+      <div className="space-y-2 text-sm">
+        <Row
+          label="发车"
+          value={`${detail.start_class_time || ""} · ${detail.start_station_name || ""}`}
+        />
+        <Row
+          label="到达"
+          value={`${detail.end_class_time || ""} · ${detail.end_station_name || ""}`}
+        />
+        {detail.contact_phone && <Row label="联系电话" value={detail.contact_phone} />}
+      </div>
+
+      {/* 乘客 */}
+      {detail.passengers && detail.passengers.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-neutral-100">
+          <div className="text-xs font-medium text-neutral-500 mb-2">乘车人</div>
+          <div className="space-y-1">
+            {detail.passengers.map((p, i) => (
+              <div key={i} className="text-xs text-neutral-600">
+                {p.name}
+                {p.is_child && <span className="ml-1 text-amber-600">儿童</span>}
+                {p.cert_no && ` · ${p.cert_no.slice(-4)}`}
+                {p.phone && ` · ${p.phone}`}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 车票 */}
+      {detail.tickets && detail.tickets.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-neutral-100">
+          <div className="text-xs font-medium text-neutral-500 mb-2">车票</div>
+          <div className="space-y-1.5">
+            {detail.tickets.map((t, i) => (
+              <div
+                key={i}
+                className="flex items-center justify-between text-xs text-neutral-600 bg-neutral-50 rounded px-2 py-1.5"
+              >
+                <div>
+                  {t.passenger_name}
+                  {t.seat_no && ` · 座位 ${t.seat_no}`}
+                  {t.ticket_type && ` · ${t.ticket_type}`}
+                </div>
+                <div className="flex items-center gap-2">
+                  {typeof t.pay_amount === "number" && (
+                    <span className="text-brand-600">¥{t.pay_amount}</span>
+                  )}
+                  {t.ticket_status && (
+                    <span className="text-neutral-400">{t.ticket_status}</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

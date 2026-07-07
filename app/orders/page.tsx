@@ -24,8 +24,8 @@ export default function OrdersPage() {
         <div className="rounded-2xl border border-neutral-200 bg-white p-12 text-center">
           <div className="text-4xl mb-3 opacity-50">📋</div>
           <h3 className="font-semibold mb-1">暂无订单</h3>
-          <p className="text-sm text-neutral-500 mb-4">去搜索机票或酒店，开启你的旅程</p>
-          <div className="flex gap-3 justify-center">
+          <p className="text-sm text-neutral-500 mb-4">去搜索机票、酒店或巴士，开启你的旅程</p>
+          <div className="flex gap-3 justify-center flex-wrap">
             <Link
               href="/flight"
               className="px-5 h-10 inline-flex items-center rounded-xl bg-brand-500 text-white text-sm hover:bg-brand-600 transition"
@@ -37,6 +37,12 @@ export default function OrdersPage() {
               className="px-5 h-10 inline-flex items-center rounded-xl border border-neutral-200 text-sm text-neutral-600 hover:bg-neutral-50 transition"
             >
               搜酒店
+            </Link>
+            <Link
+              href="/bus"
+              className="px-5 h-10 inline-flex items-center rounded-xl border border-neutral-200 text-sm text-neutral-600 hover:bg-neutral-50 transition"
+            >
+              搜巴士
             </Link>
           </div>
         </div>
@@ -56,10 +62,12 @@ export default function OrdersPage() {
                     className={`text-[11px] px-1.5 py-0.5 rounded ${
                       o.type === "flight"
                         ? "bg-sky-50 text-sky-600"
+                        : o.type === "bus"
+                        ? "bg-amber-50 text-amber-600"
                         : "bg-violet-50 text-violet-600"
                     }`}
                   >
-                    {o.type === "flight" ? "机票" : "酒店"}
+                    {o.type === "flight" ? "机票" : o.type === "bus" ? "巴士" : "酒店"}
                   </span>
                   <span className="text-xs text-neutral-400">
                     {new Date(o.created_at).toLocaleString("zh-CN")}
