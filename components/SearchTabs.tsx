@@ -15,6 +15,8 @@ import CityPickerPanel from "@/components/flight/CityPickerPanel";
 
 /** 酒店最近搜索的 localStorage key */
 const HOTEL_RECENT_KEY = "hotel_recent_cities";
+/** 巴士最近搜索的 localStorage key */
+const BUS_RECENT_KEY = "bus_recent_cities";
 const MAX_RECENT = 6;
 
 type TabKey = "flight" | "hotel" | "bus";
@@ -92,37 +94,6 @@ export default function SearchTabs({
 }
 
 /* ------------------------------ 共享小组件 ------------------------------ */
-
-function CityPicker({
-  label,
-  value,
-  onChange,
-  options,
-  hideCode,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: { city: string; code: string }[];
-  hideCode?: boolean;
-}) {
-  return (
-    <label className="flex flex-col gap-1.5 min-w-0">
-      <span className="text-xs font-medium text-neutral-500">{label}</span>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-12 rounded-xl border border-neutral-200 bg-neutral-50 px-3 text-sm focus:border-brand-400 focus:bg-white focus:ring-2 focus:ring-brand-100 transition"
-      >
-        {options.map((o) => (
-          <option key={o.code} value={o.code}>
-            {hideCode ? o.city : `${o.city} (${o.code})`}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
 
 function DateField({
   label,
@@ -375,33 +346,136 @@ function HotelForm({ router }: { router: ReturnType<typeof useRouter> }) {
 
 /* -------------------------------- 巴士 -------------------------------- */
 
+/** 巴士面板：只有国内城市，单 scope（组件不会渲染切换 Tab）。
+ * BusCity 用 adcode 作值；映射成 AirportCity 形态以复用 CityPickerPanel（code=adcode）。 */
+const BUS_SCOPES = [
+  {
+    key: "domestic" as const,
+    label: "国内",
+    cities: POPULAR_BUS_CITIES.map((c) => ({
+      city: c.city,
+      code: c.adcode,
+      province: c.province,
+      letter: c.letter,
+    })) as AirportCity[],
+  },
+];
+
+/** adcode 反查 BusCity（用于字段头部展示） */
+function findBusCity(adcode: string): BusCity | undefined {
+  return POPULAR_BUS_CITIES.find((c) => c.adcode === adcode);
+}
+
+/** 读取 localStorage 里最近搜索过的巴士城市 */
+function readBusRecent(): BusCity[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(BUS_RECENT_KEY);
+    if (!raw) return [];
+    const codes: string[] = JSON.parse(raw);
+    return codes
+      .map((code) => POPULAR_BUS_CITIES.find((c) => c.adcode === code))
+      .filter((c): c is BusCity => !!c);
+  } catch {
+    return [];
+  }
+}
+
+function pushBusRecent(adcode: string) {
+  if (typeof window === "undefined") return;
+  try {
+    const prev = readBusRecent().map((c) => c.adcode);
+    const next = [adcode, ...prev.filter((n) => n !== adcode)].slice(0, MAX_RECENT);
+    localStorage.setItem(BUS_RECENT_KEY, JSON.stringify(next));
+  } catch {
+    // 忽略隐私模式等写入异常
+  }
+}
+
+function BusCityField({
+  label,
+  value,
+  onChange,
+  recent,
+}: {
+  label: string;
+  value: string; // adcode
+  onChange: (v: string) => void;
+  recent?: AirportCity[];
+}) {
+  const [open, setOpen] = useState(false);
+  const cur = findBusCity(value);
+  return (
+    <div className="flex flex-col gap-1.5 min-w-0 relative">
+      <span className="text-xs font-medium text-neutral-500">{label}</span>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="h-12 rounded-xl border border-neutral-200 bg-neutral-50 px-3 text-left text-sm focus:border-brand-400 focus:bg-white focus:ring-2 focus:ring-brand-100 transition flex items-center justify-between gap-2"
+      >
+        <span className="truncate">
+          {cur ? (
+            <span className="font-medium">{cur.city}</span>
+          ) : (
+            <span className="text-neutral-400">请选择</span>
+          )}
+        </span>
+        <span className="text-neutral-400 text-xs shrink-0">▾</span>
+      </button>
+      {open && (
+        <CityPickerPanel
+          value={value}
+          valueMode="code"
+          scopes={BUS_SCOPES}
+          recent={recent}
+          onChange={onChange}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
 function BusForm({ router }: { router: ReturnType<typeof useRouter> }) {
   const cities = POPULAR_BUS_CITIES;
   const [from, setFrom] = useState(cities[3].adcode); // 深圳
   const [to, setTo] = useState(cities[2].adcode); // 广州
   const [date, setDate] = useState(defaultDate(7));
+  const [recent, setRecent] = useState<AirportCity[]>([]);
+
+  // 挂载后读取最近搜索（避免 SSR 报错）
+  useEffect(() => {
+    setRecent(
+      readBusRecent().map((c) => ({
+        city: c.city,
+        code: c.adcode,
+        province: c.province,
+        letter: c.letter,
+      }))
+    );
+  }, []);
 
   const swap = () => {
     setFrom(to);
     setTo(from);
   };
 
-  const busOptions = cities.map((c: BusCity) => ({ city: c.city, code: c.adcode }));
-
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
+        pushBusRecent(from);
+        pushBusRecent(to);
         const q = new URLSearchParams({ from, to, date });
         router.push(`/bus?${q.toString()}`);
       }}
       className="space-y-3"
     >
-      {/* 行1：出发 ⇄ 到达 */}
+      {/* 行1：出发 ⇄ 到达（面板选择，支持热门 + A-Z） */}
       <div className="grid grid-cols-[1fr_auto_1fr] gap-3">
-        <CityPicker label="出发城市" value={from} onChange={setFrom} options={busOptions} hideCode />
+        <BusCityField label="出发城市" value={from} onChange={setFrom} recent={recent} />
         <SwapButton onClick={swap} />
-        <CityPicker label="到达城市" value={to} onChange={setTo} options={busOptions} hideCode />
+        <BusCityField label="到达城市" value={to} onChange={setTo} recent={recent} />
       </div>
       {/* 行2：日期 + 搜索 */}
       <div className="flex gap-3">
