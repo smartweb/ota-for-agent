@@ -42,6 +42,23 @@ export function removeOrderIndex(outTradeNo: string): void {
   window.localStorage.setItem(KEY, JSON.stringify(list));
 }
 
+/**
+ * 用上游详情就地更新索引条目（金额/标题）。
+ * status 不写入索引（实时性差），仅更新展示用的 amount/title。
+ * 返回更新后的列表，调用方可用它刷新 UI。
+ */
+export function patchOrderIndex(
+  outTradeNo: string,
+  patch: Partial<Pick<OrderIndexEntry, "amount" | "title" | "order_no">>
+): OrderIndexEntry[] {
+  if (typeof window === "undefined") return [];
+  const list = getOrderIndex().map((e) =>
+    e.out_trade_no === outTradeNo ? { ...e, ...patch } : e
+  );
+  window.localStorage.setItem(KEY, JSON.stringify(list));
+  return list;
+}
+
 export function findOrderByOrderNo(orderNo: string): OrderIndexEntry | undefined {
   return getOrderIndex().find((e) => e.order_no === orderNo);
 }

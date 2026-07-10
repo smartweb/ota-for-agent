@@ -17,6 +17,11 @@ const STATUS_MAP: Record<string, { label: string; cls: string }> = {
   confirmed: { label: "已确认", cls: "bg-emerald-50 text-emerald-600" },
   // 巴士
   ticketed: { label: "已出票", cls: "bg-emerald-50 text-emerald-600" },
+  // 通用 pay_status
+  unpaid: { label: "未支付", cls: "bg-amber-50 text-amber-600" },
+  pending: { label: "处理中", cls: "bg-blue-50 text-blue-600" },
+  failed: { label: "支付失败", cls: "bg-red-50 text-red-600" },
+  expired: { label: "已过期", cls: "bg-neutral-100 text-neutral-400" },
 };
 
 export function StatusBadge({ status, text }: { status: string; text?: string }) {
