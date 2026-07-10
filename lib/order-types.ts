@@ -184,6 +184,9 @@ export interface FlightOrderDetailResponse {
   refund_amount?: number;
   refund_fee?: number;
   refund_rule?: RefundRuleInfo;
+  /** 收银台 URL（待支付状态下返回） */
+  checkout_url?: string;
+  pay_expire_time?: string;
 }
 
 /* ----------------------------- 机票：列表/取消 ----------------------------- */
@@ -340,6 +343,9 @@ export interface HotelOrderDetailResponse {
   paid_at?: string;
   updated_at?: string;
   cancel_info?: HotelCancelInfo;
+  /** 收银台 URL（待支付状态下返回） */
+  checkout_url?: string;
+  expires_at?: string;
 }
 
 export interface HotelOrderListItem {
@@ -479,6 +485,9 @@ export interface BusOrderDetailResponse {
   passengers?: BusPassenger[];
   tickets?: BusTicket[];
   created_at?: string;
+  /** 收银台 URL（待支付状态下返回） */
+  checkout_url?: string;
+  pay_expire_time?: string;
 }
 
 /** 订单列表项 */

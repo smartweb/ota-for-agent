@@ -114,6 +114,15 @@ function OrderDetailInner() {
   const totalAmount = d.total_amount;
   const orderNoDisplay = d.system_no || d.order_no || orderId;
   const payDeadline = d.pay_expire_time || d.expires_at;
+  const checkoutUrl = d.checkout_url as string | undefined;
+
+  // 待支付判定：status 或 pay_status 任一指向待支付即视为可继续支付
+  const pendingPay =
+    status === "pending_pay" ||
+    status === "pending_payment" ||
+    d.pay_status === "pending_pay" ||
+    d.pay_status === "pending_payment" ||
+    d.pay_status === "unpaid";
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-8">
@@ -130,7 +139,12 @@ function OrderDetailInner() {
           <h1 className="text-lg font-semibold">
             {isFlight ? "机票订单" : isBus ? "巴士订单" : "酒店订单"}
           </h1>
-          <StatusBadge status={status} text={d.status_text} />
+          <div className="flex items-center gap-2">
+            {d.pay_status && d.pay_status !== status && (
+              <StatusBadge status={d.pay_status} text={d.pay_status_text} />
+            )}
+            <StatusBadge status={status} text={d.status_text} />
+          </div>
         </div>
         <div className="text-xs text-neutral-400 space-y-1">
           <div>订单号：{orderNoDisplay}</div>
@@ -169,14 +183,41 @@ function OrderDetailInner() {
             {canceling ? "取消中..." : "取消订单"}
           </button>
         )}
-        {/* 待支付状态提供重新支付（跳详情系统会展示 checkout_url，这里简化为去列表） */}
-        {(status === "pending_pay" || status === "pending_payment") && (
-          <Link
-            href="/orders"
+        {/* 待支付：用上游返回的 checkout_url 打开收银台；无 URL 时提示稍后重试 */}
+        {pendingPay && checkoutUrl && (
+          <a
+            href={checkoutUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => {
+              // 收银台关闭后回跳到支付结果确认页，触发真实状态轮询
+              setTimeout(() => {
+                window.location.href = `/payment/redirect?id=${
+                  d.out_trade_no || ""
+                }&type=${type}`;
+              }, 800);
+            }}
             className="px-6 h-11 inline-flex items-center rounded-xl bg-brand-500 text-white text-sm font-medium hover:bg-brand-600 transition"
           >
             去支付
-          </Link>
+          </a>
+        )}
+        {pendingPay && !checkoutUrl && (
+          <button
+            onClick={fetchDetail}
+            className="px-6 h-11 inline-flex items-center rounded-xl bg-brand-500 text-white text-sm font-medium hover:bg-brand-600 transition"
+          >
+            刷新支付链接
+          </button>
+        )}
+        {/* 支付完成 / 已确认：提供再次确认支付状态的入口 */}
+        {!pendingPay && (
+          <button
+            onClick={fetchDetail}
+            className="px-6 h-11 inline-flex items-center rounded-xl border border-neutral-200 text-sm text-neutral-600 hover:bg-neutral-50 transition"
+          >
+            刷新状态
+          </button>
         )}
       </div>
     </div>
