@@ -11,9 +11,12 @@ import type { BusItem } from "@/lib/types";
 export default function BusBookButton({
   bus,
   disabled,
+  searchParams,
 }: {
   bus: BusItem;
   disabled?: boolean;
+  /** 列表页搜索上下文（adcode + date），用于预订页"返回列表"还原 */
+  searchParams?: { from?: string; to?: string; date?: string };
 }) {
   const router = useRouter();
 
@@ -35,6 +38,10 @@ export default function BusBookButton({
         class_name: bus.class_name,
         price: bus.price, // 分
         line_name: bus.line_name,
+        // 搜索上下文（adcode），返回列表时用
+        search_from: searchParams?.from || "",
+        search_to: searchParams?.to || "",
+        search_date: searchParams?.date || "",
       })
     );
 

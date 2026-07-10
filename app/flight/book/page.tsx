@@ -14,6 +14,7 @@ import { LoadingState, ErrorState } from "@/components/ResultShell";
 import type { PassengerInfo, ContactInfo } from "@/lib/order-types";
 import type { FlightPricingResponse } from "@/lib/order-types";
 import { addOrderIndex, genOutTradeNo } from "@/lib/order-store";
+import { useGuardedAction } from "@/lib/use-guarded-action";
 
 export default function FlightBookPage() {
   return (
@@ -54,17 +55,8 @@ function FlightBookInner() {
   const [pricing, setPricing] = useState<FlightPricingResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  if (!tokenReady) {
-    return <LoadingState text="加载中..." />;
-  }
-  if (!searchOfferId) {
-    return (
-      <ErrorState message="缺少预订令牌，请从航班列表点击「预订」进入" />
-    );
-  }
-
-  /** 第一步：校验 + 验价 */
-  const doPricing = async () => {
+  /** 第一步：校验 + 验价（防重复提交） */
+  const doPricing = useGuardedAction(async () => {
     setError(null);
     const ve = validatePassengers(passengers) || validateContact(contact);
     if (ve) {
@@ -86,10 +78,10 @@ function FlightBookInner() {
       setError((e as Error).message);
       setStep("fill");
     }
-  };
+  });
 
-  /** 第二步：创建订单 */
-  const doCreateOrder = async () => {
+  /** 第二步：创建订单（防重复提交） */
+  const doCreateOrder = useGuardedAction(async () => {
     if (!pricing?.offer_id) {
       setError("验价结果缺失，请重新验价");
       return;
@@ -133,7 +125,16 @@ function FlightBookInner() {
       setError((e as Error).message);
       setStep("fill");
     }
-  };
+  });
+
+  if (!tokenReady) {
+    return <LoadingState text="加载中..." />;
+  }
+  if (!searchOfferId) {
+    return (
+      <ErrorState message="缺少预订令牌，请从航班列表点击「预订」进入" />
+    );
+  }
 
   const busy = step === "pricing" || step === "creating";
 

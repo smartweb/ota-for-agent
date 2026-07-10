@@ -1,24 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
-import { flightPricing, ApiError } from "@/lib/order-api";
+import { createJsonRoute } from "@/lib/route-handler";
+import { flightPricing } from "@/lib/order-api";
+import type { FlightPricingRequest } from "@/lib/order-types";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
-export async function POST(req: NextRequest) {
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ code: 400, message: "请求体不是合法 JSON", data: null }, { status: 400 });
-  }
-  try {
-    const data = await flightPricing(body as Parameters<typeof flightPricing>[0]);
-    return NextResponse.json({ code: 0, message: "success", data });
-  } catch (err) {
-    const e = err as ApiError;
-    return NextResponse.json(
-      { code: e.code ?? 500, message: e.message ?? "验价失败", data: null },
-      { status: 500 }
-    );
-  }
-}
+/** POST /api/flight/pricing —— 验价 */
+export const POST = createJsonRoute<FlightPricingRequest>(
+  async (body) => ({ data: await flightPricing(body) }),
+  { errorDefaultMessage: "验价失败" }
+);

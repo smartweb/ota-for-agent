@@ -1,24 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
-import { hotelOrderCreate, ApiError } from "@/lib/order-api";
+import { createJsonRoute } from "@/lib/route-handler";
+import { hotelOrderCreate } from "@/lib/order-api";
+import type { HotelOrderCreateRequest } from "@/lib/order-types";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
-export async function POST(req: NextRequest) {
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ code: 400, message: "请求体不是合法 JSON", data: null }, { status: 400 });
-  }
-  try {
-    const data = await hotelOrderCreate(body as Parameters<typeof hotelOrderCreate>[0]);
-    return NextResponse.json({ code: 0, message: "success", data });
-  } catch (err) {
-    const e = err as ApiError;
-    return NextResponse.json(
-      { code: e.code ?? 500, message: e.message ?? "下单失败", data: null },
-      { status: 500 }
-    );
-  }
-}
+export const POST = createJsonRoute<HotelOrderCreateRequest>(
+  async (body) => ({ data: await hotelOrderCreate(body) }),
+  { errorDefaultMessage: "下单失败" }
+);

@@ -1,24 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
-import { flightOrderList, ApiError } from "@/lib/order-api";
+import { createJsonRoute } from "@/lib/route-handler";
+import { flightOrderList } from "@/lib/order-api";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
-export async function POST(req: NextRequest) {
-  let body: Record<string, unknown> = {};
-  try {
-    body = await req.json();
-  } catch {
-    // 允许空 body
-  }
-  try {
-    const data = await flightOrderList(body);
-    return NextResponse.json({ code: 0, message: "success", data });
-  } catch (err) {
-    const e = err as ApiError;
-    return NextResponse.json(
-      { code: e.code ?? 500, message: e.message ?? "查询失败", data: null },
-      { status: 500 }
-    );
-  }
-}
+/** POST /api/flight/order/list [page,page_size,status] —— 机票订单列表 */
+export const POST = createJsonRoute<Record<string, unknown>>(
+  async (body) => ({ data: await flightOrderList(body) }),
+  { allowEmptyBody: true, errorDefaultMessage: "查询失败" }
+);

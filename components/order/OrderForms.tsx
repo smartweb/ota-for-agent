@@ -10,6 +10,14 @@ import type {
   BusPassenger,
 } from "@/lib/order-types";
 
+// 校验逻辑抽取到 lib/order-validation（纯函数，便于单测），此处 re-export 保持调用方不变
+export {
+  validatePassengers,
+  validateGuests,
+  validateContact,
+  validateBusPassengers,
+} from "@/lib/order-validation";
+
 /* ----------------------------- 原子输入 ----------------------------- */
 
 const inputCls =
@@ -261,17 +269,8 @@ export function emptyBusPassenger(): BusPassenger {
   return { name: "", phone: "", cert_no: "", cert_type: 1, is_child: false };
 }
 
-export function validateBusPassengers(list: BusPassenger[]): string | null {
-  for (let i = 0; i < list.length; i++) {
-    const p = list[i];
-    if (!p.name.trim()) return `请填写乘客 ${i + 1} 的姓名`;
-    if (!p.phone.trim() || p.phone.length !== 11) return `乘客 ${i + 1} 的手机号无效`;
-    if (!p.cert_no.trim()) return `请填写乘客 ${i + 1} 的证件号码`;
-  }
-  return null;
-}
-
 /* ----------------------------- 联系人表单 ----------------------------- */
+// 注：validate* 函数实现见 lib/order-validation.ts，本文件仅 re-export。
 
 export function ContactForm({
   value,
@@ -305,26 +304,5 @@ export function ContactForm({
 }
 
 /* ----------------------------- 表单校验 ----------------------------- */
-
-export function validatePassengers(list: PassengerInfo[]): string | null {
-  for (let i = 0; i < list.length; i++) {
-    const p = list[i];
-    if (!p.name.trim()) return `请填写乘客 ${i + 1} 的姓名`;
-    if (!p.id_number.trim()) return `请填写乘客 ${i + 1} 的证件号`;
-    if (!p.phone.trim() || p.phone.length !== 11) return `乘客 ${i + 1} 的手机号无效`;
-  }
-  return null;
-}
-
-export function validateGuests(list: GuestInfo[]): string | null {
-  for (let i = 0; i < list.length; i++) {
-    if (!list[i].name.trim()) return `请填写入住人 ${i + 1} 的姓名`;
-  }
-  return null;
-}
-
-export function validateContact(c: ContactInfo): string | null {
-  if (!c.name.trim()) return "请填写联系人姓名";
-  if (!c.phone.trim() || c.phone.length !== 11) return "联系人手机号无效";
-  return null;
-}
+// 实现已迁移到 lib/order-validation.ts（纯函数，便于单测）。
+// 本文件顶部已 re-export，调用方无需修改。

@@ -98,13 +98,32 @@ export async function hotelOrderDetail(orderNo: string): Promise<HotelOrderDetai
   const token = process.env.LONGXA_API_TOKEN;
   if (!token) throw new ApiError("服务端未配置 LONGXA_API_TOKEN", 500);
 
-  const res = await fetch(`${API_BASE}${ENDPOINTS.hotelOrderDetail}/${orderNo}`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    cache: "no-store",
-  });
+  const timeoutMs = Number(process.env.LONGXA_API_TIMEOUT) || 30000;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${ENDPOINTS.hotelOrderDetail}/${orderNo}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+      signal: controller.signal,
+    });
+  } catch (err) {
+    clearTimeout(timer);
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new ApiError(`上游响应超时（${timeoutMs / 1000}s）`, 504);
+    }
+    throw new ApiError(
+      `无法连接上游服务：${err instanceof Error ? err.message : "网络错误"}`,
+      502
+    );
+  }
+  clearTimeout(timer);
+
   const payload = await res.json();
   if (payload.code !== 0) {
     throw new ApiError(payload.message || `错误码 ${payload.code}`, payload.code, payload.request_id);

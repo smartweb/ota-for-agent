@@ -88,7 +88,7 @@ function FlightResultInner() {
   const fromCity = POPULAR_AIRPORTS.find((c) => c.code === from)?.city || from;
   const toCity = POPULAR_AIRPORTS.find((c) => c.code === to)?.city || to;
 
-  const allFlights = data?.flights || [];
+  const allFlights = useMemo(() => data?.flights || [], [data]);
   const filtered = useMemo(
     () => applyFlightFilters(allFlights, filter, sort),
     [allFlights, filter, sort]

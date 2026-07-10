@@ -1,27 +1,18 @@
-import { NextRequest, NextResponse } from "next/server";
-import { hotelOrderCancel, ApiError } from "@/lib/order-api";
+import { createJsonRoute } from "@/lib/route-handler";
+import { hotelOrderCancel } from "@/lib/order-api";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
-export async function POST(req: NextRequest) {
-  let body: { order_no?: string; cancel_reason?: string };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ code: 400, message: "请求体不是合法 JSON", data: null }, { status: 400 });
-  }
-  if (!body.order_no) {
-    return NextResponse.json({ code: 400, message: "需要 order_no", data: null }, { status: 400 });
-  }
-  try {
-    const data = await hotelOrderCancel(body.order_no, body.cancel_reason);
-    return NextResponse.json({ code: 0, message: "success", data });
-  } catch (err) {
-    const e = err as ApiError;
-    return NextResponse.json(
-      { code: e.code ?? 500, message: e.message ?? "取消失败", data: null },
-      { status: 500 }
-    );
-  }
+interface CancelBody {
+  order_no?: string;
+  cancel_reason?: string;
 }
+
+/** POST /api/hotel/order/cancel { order_no, cancel_reason? } —— 取消酒店订单 */
+export const POST = createJsonRoute<CancelBody>(
+  async (body) => {
+    if (!body.order_no) return { error: "需要 order_no" };
+    return {
+      data: await hotelOrderCancel(body.order_no, body.cancel_reason),
+    };
+  },
+  { errorDefaultMessage: "取消失败" }
+);

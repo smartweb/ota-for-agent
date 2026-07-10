@@ -26,6 +26,13 @@ const ENDPOINTS = {
 
 export type BusinessType = keyof typeof ENDPOINTS;
 
+/**
+ * 上游请求超时（毫秒）。平台接口可能较慢，给到 30s；
+ * 超过后主动中断，避免 Serverless 函数被永久挂起（Vercel 函数最长执行 10s~60s）。
+ * 可用环境变量 LONGXA_API_TIMEOUT 覆盖。
+ */
+const API_TIMEOUT_MS = Number(process.env.LONGXA_API_TIMEOUT) || 30000;
+
 export class ApiError extends Error {
   code: number;
   requestId?: string;
@@ -49,23 +56,46 @@ function getToken(): string {
 }
 
 /**
- * 通用调用封装：注入 Bearer Token，统一解包 { code, message, data }
+ * 通用调用封装：注入 Bearer Token，统一解包 { code, message, data }。
+ * 带 AbortController 超时保护，避免上游挂起导致函数永久阻塞。
  */
 export async function callApi<T>(
   endpoint: string,
   body: Record<string, unknown>
 ): Promise<T> {
   const url = `${API_BASE}${endpoint}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${getToken()}`,
-    },
-    body: JSON.stringify(body),
-    // 平台侧可能较慢，给充足时间
-    cache: "no-store",
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${getToken()}`,
+      },
+      body: JSON.stringify(body),
+      // 平台侧可能较慢，且订单/价格需要实时性
+      cache: "no-store",
+      signal: controller.signal,
+    });
+  } catch (err) {
+    clearTimeout(timer);
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new ApiError(
+        `上游响应超时（${API_TIMEOUT_MS / 1000}s）`,
+        504,
+        undefined
+      );
+    }
+    // 网络层错误（DNS/连接拒绝等）
+    throw new ApiError(
+      `无法连接上游服务：${err instanceof Error ? err.message : "网络错误"}`,
+      502
+    );
+  }
+  clearTimeout(timer);
 
   let payload: ApiResponse<T>;
   try {

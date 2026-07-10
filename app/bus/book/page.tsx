@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { LoadingState, ErrorState } from "@/components/ResultShell";
 import {
@@ -13,6 +13,7 @@ import {
 } from "@/components/order/OrderForms";
 import type { BusPassenger, ContactInfo } from "@/lib/order-types";
 import { addOrderIndex, genOutTradeNo } from "@/lib/order-store";
+import { useGuardedAction } from "@/lib/use-guarded-action";
 
 interface BusBookMeta {
   line_class_day_gid: string;
@@ -27,6 +28,10 @@ interface BusBookMeta {
   class_name?: string;
   price?: number; // 分
   line_name?: string;
+  // 搜索上下文（adcode + date），用于"返回列表"还原
+  search_from?: string;
+  search_to?: string;
+  search_date?: string;
 }
 
 /** 分 → 元 */
@@ -64,7 +69,7 @@ function BusBookInner() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 从 sessionStorage 读取下单所需的 GID
+  // 从 sessionStorage 读取下单所需的 GID（及搜索上下文）
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
@@ -75,10 +80,19 @@ function BusBookInner() {
     }
   }, []);
 
+  // 返回列表链接：优先用 sessionStorage 里的搜索 adcode，回退到 URL（兼容旧链接）
+  const backToListHref = useMemo(() => {
+    const f = meta?.search_from || sp.get("from") || "";
+    const t = meta?.search_to || sp.get("to") || "";
+    const d = meta?.search_date || depDate || "";
+    const q = new URLSearchParams({ from: f, to: t, date: d });
+    return `/bus?${q.toString()}`;
+  }, [meta, sp, depDate]);
+
   const invalid = !meta?.line_class_day_gid || !meta?.start_station_gid || !meta?.end_station_gid;
 
-  /** 询价 + 下单 */
-  const handleSubmit = async () => {
+  /** 询价 + 下单（防重复提交） */
+  const handleSubmit = useGuardedAction(async () => {
     setError(null);
 
     if (invalid) {
@@ -158,7 +172,7 @@ function BusBookInner() {
       setError((e as Error).message);
       setSubmitting(false);
     }
-  };
+  });
 
   if (invalid && meta !== null) {
     return (
@@ -171,7 +185,7 @@ function BusBookInner() {
   return (
     <div className="mx-auto max-w-3xl px-6 py-8">
       <Link
-        href={`/bus?from=&to=&date=${depDate}`}
+        href={backToListHref}
         className="inline-flex items-center gap-1 text-sm text-neutral-500 hover:text-brand-600 mb-4 transition"
       >
         ← 返回巴士列表

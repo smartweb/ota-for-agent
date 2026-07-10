@@ -5,6 +5,7 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { LoadingState, ErrorState } from "@/components/ResultShell";
 import { StatusBadge } from "@/components/order/OrderStatus";
+import { useGuardedAction } from "@/lib/use-guarded-action";
 import type {
   FlightOrderDetailResponse,
   HotelOrderDetailResponse,
@@ -67,7 +68,7 @@ function OrderDetailInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId, type]);
 
-  const handleCancel = async () => {
+  const handleCancel = useGuardedAction(async () => {
     if (!confirm("确定取消该订单吗？")) return;
     setCanceling(true);
     try {
@@ -95,7 +96,7 @@ function OrderDetailInner() {
     } finally {
       setCanceling(false);
     }
-  };
+  });
 
   if (loading) return <LoadingState text="加载订单..." />;
   if (error) return <ErrorState message={error} />;

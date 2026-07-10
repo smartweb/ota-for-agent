@@ -75,7 +75,11 @@ function BusResultInner() {
           {data?.lines && data.lines.length > 0 ? (
             <div className="space-y-3">
               {data.lines.map((b, i) => (
-                <BusCard key={b.gid || i} bus={b} />
+                <BusCard
+                  key={b.gid || i}
+                  bus={b}
+                  searchParams={{ from, to, date }}
+                />
               ))}
             </div>
           ) : (

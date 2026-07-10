@@ -27,7 +27,14 @@ function distanceLabel(d?: number): string {
   return `${km}km`;
 }
 
-export default function BusCard({ bus }: { bus: BusItem }) {
+export default function BusCard({
+  bus,
+  searchParams,
+}: {
+  bus: BusItem;
+  /** 当前搜索的 from/to（adcode）/date，用于预订页返回链 */
+  searchParams?: { from?: string; to?: string; date?: string };
+}) {
   const avail = bus.avail_seat_count ?? 0;
   const low = avail > 0 && avail <= 5;
 
@@ -84,7 +91,11 @@ export default function BusCard({ bus }: { bus: BusItem }) {
               {fenToYuan(bus.price)}
             </span>
           </div>
-          <BusBookButton bus={bus} disabled={avail === 0} />
+          <BusBookButton
+            bus={bus}
+            disabled={avail === 0}
+            searchParams={searchParams}
+          />
         </div>
       </div>
 

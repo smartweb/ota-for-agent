@@ -14,6 +14,7 @@ import { LoadingState, ErrorState, EmptyState } from "@/components/ResultShell";
 import type { ContactInfo, GuestInfo, RoomTypeProduct } from "@/lib/order-types";
 import type { HotelRoomsResponse } from "@/lib/order-types";
 import { addOrderIndex, genOutTradeNo } from "@/lib/order-store";
+import { useGuardedAction } from "@/lib/use-guarded-action";
 
 export default function HotelBookPage() {
   return (
@@ -76,8 +77,8 @@ function HotelBookInner() {
     return Math.max(1, Math.round(diff));
   }, [checkIn, checkOut]);
 
-  /** 下单 */
-  const doCreateOrder = async () => {
+  /** 下单（防重复提交） */
+  const doCreateOrder = useGuardedAction(async () => {
     if (!selectedProduct?.offer_id) {
       setOrderError("请先选择房型");
       return;
@@ -124,7 +125,7 @@ function HotelBookInner() {
       setOrderError((e as Error).message);
       setCreating(false);
     }
-  };
+  });
 
   if (loading) return <LoadingState text="正在查询房型..." />;
   if (error) return <ErrorState message={error} />;
